@@ -10,7 +10,7 @@ using System.Windows.Media;
 
 namespace OSharp.Animation.WPF
 {
-    public class StoryboardCanvasHost:IDisposable
+    public class StoryboardCanvasHost : IDisposable
     {
         internal static readonly Dictionary<ImageSource, Brush> BrushCache = new Dictionary<ImageSource, Brush>();
 
@@ -22,11 +22,16 @@ namespace OSharp.Animation.WPF
             Canvas = canvas;
         }
 
-        public ImageObject CreateElement(Image ui, Origin<double> origin, double width, double height)
+        public ImageObject CreateElement(Image ui,
+            Origin<double> origin,
+            double width,
+            double height,
+            double defaultX = 320,
+            double defaultY = 240)
         {
             //Canvas.Children.Add(ui);
 
-            var ele = new ImageObject(ui, width, height, origin)
+            var ele = new ImageObject(ui, width, height, origin, defaultX, defaultY)
             {
                 Host = this
             };

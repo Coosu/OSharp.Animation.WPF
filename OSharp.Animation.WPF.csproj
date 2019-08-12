@@ -108,6 +108,18 @@
       <Project>{8c9a6bfa-fca2-469f-a5c9-eac668745d92}</Project>
       <Name>OSharp.Animation</Name>
     </ProjectReference>
+    <ProjectReference Include="..\OSharp.Beatmap\OSharp.Beatmap.csproj">
+      <Project>{ecd686a3-083e-4bad-967e-40f7467d7cf0}</Project>
+      <Name>OSharp.Beatmap</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\OSharp.Common\OSharp.Common.csproj">
+      <Project>{14a79d62-96d7-4a1c-92b1-5148558c1108}</Project>
+      <Name>OSharp.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\OSharp.Storyboard\OSharp.Storyboard.csproj">
+      <Project>{f00c90ff-1f1a-45c3-be84-ea675d026364}</Project>
+      <Name>OSharp.Storyboard</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
