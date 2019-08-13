@@ -34,6 +34,15 @@ namespace OSharp.Animation.WPF
         private TransformGroup _group;
         private double _defaultX;
         private double _defaultY;
+        private bool _groupMode;
+
+        private double? _firstFade;
+        private double? _firstRotate;
+        private double? _firstMX;
+        private double? _firstMY;
+        private double? _firstVX;
+        private double? _firstVY;
+        private int _firstFadeIndex;
 
         private double PlayTime => Storyboard.GetCurrentTime().TotalMilliseconds;
 
@@ -45,7 +54,8 @@ namespace OSharp.Animation.WPF
 
         internal StoryboardCanvasHost Host { get; set; }
 
-        internal ImageObject(Image image, double width, double height, Origin<double> origin, double defaultX, double defaultY)
+        internal ImageObject(Image image, double width, double height, Origin<double> origin, double defaultX,
+            double defaultY, SysAni.Storyboard storyboard = null)
         {
             _image = image;
             Origin = origin;
@@ -53,8 +63,12 @@ namespace OSharp.Animation.WPF
 
             _image.RenderTransform = InitTransformGroup(width, height, defaultX, defaultY);
 
+            if (storyboard != null)
+            {
+                _groupMode = true;
+            }
 
-            Storyboard = new SysAni.Storyboard();
+            Storyboard = storyboard ?? new SysAni.Storyboard();
             //Storyboard.CurrentTimeInvalidated += Storyboard_CurrentTimeInvalidated;
             OriginWidth = width;
             OriginHeight = height;
@@ -76,7 +90,8 @@ namespace OSharp.Animation.WPF
                 var scaleTransform = new ScaleTransform(1, 1);
                 var rotateTransform = new RotateTransform(0);
                 var flipTransform = new ScaleTransform(1, 1);
-                var translateTransform = new TranslateTransform(defaultX - width * Origin.X, defaultY - height * Origin.Y);
+                var translateTransform =
+                    new TranslateTransform(defaultX - width * Origin.X, defaultY - height * Origin.Y);
 
                 _group = new TransformGroup();
                 _group.Children.Add(scaleTransform);
@@ -90,24 +105,6 @@ namespace OSharp.Animation.WPF
 
         public void BeginAnimation()
         {
-            if (Storyboard.FillBehavior != FillBehavior.Stop)
-            {
-                Storyboard.Stop();
-                if (_blendStatus == AnimateStatus.None)
-                {
-                    Host?.Canvas.Children.Remove(_image);
-                }
-                else if (_blendStatus == AnimateStatus.Static)
-                {
-                    Host?.Canvas.Children.Remove(_addImage);
-                }
-                else
-                {
-                    Host?.Canvas.Children.Remove(_image);
-                    Host?.Canvas.Children.Remove(_addImage);
-                }
-            }
-
             if (_blendStatus == AnimateStatus.None)
             {
                 Host?.Canvas.Children.Add(_image);
@@ -181,7 +178,6 @@ namespace OSharp.Animation.WPF
 
             //    _dispatcherT.Stop();
             //};
-
         }
 
         public void Reset()
@@ -197,6 +193,12 @@ namespace OSharp.Animation.WPF
 
         protected override void FadeAction(List<TransformAction> actions)
         {
+            if (_firstFade == null)
+            {
+                _firstFade = (double)actions.First().StartParam;
+                _firstFadeIndex = _transformList.Count;
+            }
+
             foreach (var transformAction in actions)
             {
                 var dur = TimeSpan.FromMilliseconds(transformAction.EndTime - transformAction.StartTime);
@@ -206,7 +208,7 @@ namespace OSharp.Animation.WPF
                     From = (double)transformAction.StartParam,
                     To = (double)transformAction.EndParam,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
             }
@@ -214,6 +216,11 @@ namespace OSharp.Animation.WPF
 
         protected override void RotateAction(List<TransformAction> actions)
         {
+            if (_firstRotate == null)
+            {
+                _firstRotate = (double)actions.First().StartParam / Math.PI * 360;
+            }
+
             foreach (var transformAction in actions)
             {
                 var dur = TimeSpan.FromMilliseconds(transformAction.EndTime - transformAction.StartTime);
@@ -223,7 +230,7 @@ namespace OSharp.Animation.WPF
                     From = (double)transformAction.StartParam / Math.PI * 360,
                     To = (double)transformAction.EndParam / Math.PI * 360,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
             }
@@ -231,6 +238,16 @@ namespace OSharp.Animation.WPF
 
         protected override void MoveAction(List<TransformAction> actions)
         {
+            if (_firstMX == null)
+            {
+                _firstMX = ((Vector2<double>)(actions.First().StartParam)).X - OriginWidth * Origin.X;
+            }
+
+            if (_firstMY == null)
+            {
+                _firstMY = ((Vector2<double>)(actions.First().StartParam)).Y - OriginHeight * Origin.Y;
+            }
+
             foreach (var transformAction in actions)
             {
                 var dur = TimeSpan.FromMilliseconds(transformAction.EndTime - transformAction.StartTime);
@@ -242,7 +259,7 @@ namespace OSharp.Animation.WPF
                     From = startP.X - OriginWidth * Origin.X,
                     To = endP.X - OriginWidth * Origin.X,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
                 _transformList.Add((TranslateTransform.YProperty, new DoubleAnimation
@@ -250,7 +267,7 @@ namespace OSharp.Animation.WPF
                     From = startP.Y - OriginHeight * Origin.Y,
                     To = endP.Y - OriginHeight * Origin.Y,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
             }
@@ -258,6 +275,15 @@ namespace OSharp.Animation.WPF
 
         protected override void Move1DAction(List<TransformAction> actions, bool isHorizon)
         {
+            if (_firstMX == null && isHorizon)
+            {
+                _firstMX = (double)(actions.First().StartParam) - OriginWidth * Origin.X;
+            }
+            else if (_firstMY == null && !isHorizon)
+            {
+                _firstMY = (double)(actions.First().StartParam) - OriginHeight * Origin.Y;
+            }
+
             foreach (var transformAction in actions)
             {
                 var dur = TimeSpan.FromMilliseconds(transformAction.EndTime - transformAction.StartTime);
@@ -271,7 +297,7 @@ namespace OSharp.Animation.WPF
                         From = startP - OriginWidth * Origin.X,
                         To = endP - OriginWidth * Origin.X,
                         EasingFunction = ConvertEasing(transformAction.Easing),
-                        BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                        BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                         Duration = duration
                     }));
                 }
@@ -282,7 +308,7 @@ namespace OSharp.Animation.WPF
                         From = startP - OriginHeight * Origin.Y,
                         To = endP - OriginHeight * Origin.Y,
                         EasingFunction = ConvertEasing(transformAction.Easing),
-                        BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                        BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                         Duration = duration
                     }));
                 }
@@ -291,6 +317,16 @@ namespace OSharp.Animation.WPF
 
         protected override void ScaleVecAction(List<TransformAction> actions)
         {
+            if (_firstVX == null)
+            {
+                _firstVX = ((Vector2<double>)actions.First().StartParam).X;
+            }
+
+            if (_firstVY == null)
+            {
+                _firstVY = ((Vector2<double>)actions.First().StartParam).Y;
+            }
+
             foreach (var transformAction in actions)
             {
                 var dur = TimeSpan.FromMilliseconds(transformAction.EndTime - transformAction.StartTime);
@@ -303,7 +339,7 @@ namespace OSharp.Animation.WPF
                     From = startP.X,
                     To = endP.X,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
                 _transformList.Add((ScaleTransform.ScaleYProperty, new DoubleAnimation
@@ -311,7 +347,7 @@ namespace OSharp.Animation.WPF
                     From = startP.Y,
                     To = endP.Y,
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
             }
@@ -348,7 +384,7 @@ namespace OSharp.Animation.WPF
                     From = Color.FromRgb((byte)startP.X, (byte)startP.Y, (byte)startP.Z),
                     To = Color.FromRgb((byte)endP.X, (byte)endP.Y, (byte)endP.Z),
                     EasingFunction = ConvertEasing(transformAction.Easing),
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = duration
                 }));
             }
@@ -372,7 +408,7 @@ namespace OSharp.Animation.WPF
                     Mode = BlendModes.Normal,
                     Amount = 1,
                     //Blend = StoryboardCanvasHost.BrushCache[source],
-                    Blend = new VisualBrush { Visual = _image }
+                    Blend = new VisualBrush {Visual = _image}
                 },
                 RenderTransform = InitTransformGroup(OriginWidth, OriginHeight, _defaultX, _defaultY),
                 RenderTransformOrigin = new Point(Origin.X, Origin.Y)
@@ -380,8 +416,8 @@ namespace OSharp.Animation.WPF
 
             foreach (var transformAction in actions)
             {
-                _blendDurationQueue.Enqueue(new Vector2<double>(transformAction.StartTime - MinTime,
-                    transformAction.EndTime - MinTime));
+                _blendDurationQueue.Enqueue(new Vector2<double>(transformAction.StartTime - (_groupMode ? 0 : MinTime),
+                    transformAction.EndTime - (_groupMode ? 0 : MinTime)));
             }
 
             _blendStatus = AnimateStatus.Static;
@@ -444,7 +480,7 @@ namespace OSharp.Animation.WPF
                 {
                     From = 1,
                     To = -1,
-                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - MinTime),
+                    BeginTime = TimeSpan.FromMilliseconds(transformAction.StartTime - (_groupMode ? 0 : MinTime)),
                     Duration = TimeSpan.Zero
                 }));
 
@@ -454,33 +490,69 @@ namespace OSharp.Animation.WPF
                     {
                         From = 1,
                         To = 1,
-                        BeginTime = TimeSpan.FromMilliseconds(transformAction.EndTime - MinTime),
+                        BeginTime = TimeSpan.FromMilliseconds(transformAction.EndTime - (_groupMode ? 0 : MinTime)),
                         Duration = TimeSpan.Zero
                     }));
                 }
             }
         }
 
-        protected override void HandleLoopGroup((double startTime, int loopTimes, ITransformable<double> transformList) tuple)
+        protected override void HandleLoopGroup(
+            (double startTime, int loopTimes, ITransformable<double> transformList) tuple)
         {
             var (startTime, loopTimes, transformList) = tuple;
             LoopList.Add(new SysAni.Storyboard());
             if (transformList is InternalTransformableObject<double> sb)
             {
-
             }
         }
 
-        protected override void StartAnimation() { }
+        protected override void StartAnimation()
+        {
+        }
 
         protected override void EndAnimation()
         {
+            if (_groupMode)
+            {
+                _image.Opacity = 0;
+                _transformList.Insert(_firstFadeIndex, (UIElement.OpacityProperty, new DoubleAnimation
+                {
+                    From = _firstFade ?? 1,
+                    To = _firstFade ?? 1,
+                    BeginTime = TimeSpan.FromMilliseconds(_groupMode ? MinTime : 0),
+                    Duration = TimeSpan.Zero
+                }));
+
+                var scaTrans = (ScaleTransform)_group.Children[0];
+                var rotTrans = (RotateTransform)_group.Children[1];
+                var transTrans = (TranslateTransform)_group.Children[3];
+                scaTrans.ScaleX = _firstVX ?? 1;
+                scaTrans.ScaleY = _firstVY ?? 1;
+
+                rotTrans.Angle = _firstRotate ?? 0;
+
+                transTrans.X = _firstMX ?? _defaultX - OriginWidth * Origin.X;
+                transTrans.Y = _firstMY ?? _defaultY - OriginHeight * Origin.Y;
+
+                _transformList.Add((UIElement.OpacityProperty, new DoubleAnimation
+                {
+                    From = 0,
+                    To = 0,
+                    BeginTime = TimeSpan.FromMilliseconds(MaxTime),
+                    Duration = TimeSpan.Zero
+                }));
+            }
+
             foreach (var (prop, animation) in _transformList)
             {
                 //if (prop == SolidColorBrush.ColorProperty)
                 //{
                 //    continue;
                 //}
+                if (animation.Duration < TimeSpan.Zero)
+                {
+                }
 
                 AnimationTimeline copy = null;
                 switch (_blendStatus)
@@ -498,14 +570,16 @@ namespace OSharp.Animation.WPF
 
                         Storyboard.Children.Add(copy);
                         break;
-                        //default:
-                        //    throw new ArgumentOutOfRangeException();
+                    //default:
+                    //    throw new ArgumentOutOfRangeException();
                 }
+
                 Storyboard.Children.Add(animation);
 
                 if (prop == RotateTransform.AngleProperty)
                 {
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("RenderTransform.Children[1].Angle"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("RenderTransform.Children[1].Angle"));
                     //SetProp("RenderTransform.Children[1].Angle", animation, copy);
                 }
                 else if (prop == TranslateTransform.XProperty)
@@ -520,28 +594,33 @@ namespace OSharp.Animation.WPF
                 }
                 else if (prop == ScaleTransform.ScaleXProperty)
                 {
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("RenderTransform.Children[0].ScaleX"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("RenderTransform.Children[0].ScaleX"));
                     //SetProp("RenderTransform.Children[0].ScaleX", animation, copy);
                 }
                 else if (prop == ScaleTransform.ScaleYProperty)
                 {
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("RenderTransform.Children[0].ScaleY"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("RenderTransform.Children[0].ScaleY"));
                     //SetProp("RenderTransform.Children[0].ScaleY", animation, copy);
                 }
                 else if (prop == SkewTransform.AngleXProperty)
                 {
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("RenderTransform.Children[2].ScaleX"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("RenderTransform.Children[2].ScaleX"));
                     //SetProp("RenderTransform.Children[0].ScaleX", animation, copy);
                 }
                 else if (prop == SkewTransform.AngleYProperty)
                 {
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("RenderTransform.Children[2].ScaleY"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("RenderTransform.Children[2].ScaleY"));
                     //SetProp("RenderTransform.Children[0].ScaleY", animation, copy);
                 }
                 else if (prop == SolidColorBrush.ColorProperty)
                 {
                     SysAni.Storyboard.SetTarget(animation, _image);
-                    SysAni.Storyboard.SetTargetProperty(animation, new PropertyPath("Effect.Blend.Visual.Drawing.Children[0].Brush.Color"));
+                    SysAni.Storyboard.SetTargetProperty(animation,
+                        new PropertyPath("Effect.Blend.Visual.Drawing.Children[0].Brush.Color"));
                     //SetProp("RenderTransform.Children[0].ScaleY", animation, copy);
                 }
                 else
@@ -576,15 +655,15 @@ namespace OSharp.Animation.WPF
                 case Easing.Linear:
                     return null;
                 case Easing.EasingOut:
-                    return new SineEase { EasingMode = EasingMode.EaseOut };
+                    return new SineEase {EasingMode = EasingMode.EaseOut};
                 case Easing.EasingIn:
-                    return new SineEase { EasingMode = EasingMode.EaseIn };
+                    return new SineEase {EasingMode = EasingMode.EaseIn};
                 case Easing.QuadIn:
-                    return new QuadraticEase { EasingMode = EasingMode.EaseIn };
+                    return new QuadraticEase {EasingMode = EasingMode.EaseIn};
                 case Easing.QuadOut:
-                    return new QuadraticEase { EasingMode = EasingMode.EaseOut };
+                    return new QuadraticEase {EasingMode = EasingMode.EaseOut};
                 case Easing.QuadInOut:
-                    return new QuadraticEase { EasingMode = EasingMode.EaseInOut };
+                    return new QuadraticEase {EasingMode = EasingMode.EaseInOut};
                 case Easing.CubicIn:
                     break;
                 case Easing.CubicOut:
@@ -653,7 +732,27 @@ namespace OSharp.Animation.WPF
 
         public void Dispose()
         {
+        }
 
+        public void ClearObj()
+        {
+            if (Storyboard.FillBehavior != FillBehavior.Stop)
+            {
+                Storyboard.Stop();
+                if (_blendStatus == AnimateStatus.None)
+                {
+                    Host?.Canvas.Children.Remove(_image);
+                }
+                else if (_blendStatus == AnimateStatus.Static)
+                {
+                    Host?.Canvas.Children.Remove(_addImage);
+                }
+                else
+                {
+                    Host?.Canvas.Children.Remove(_image);
+                    Host?.Canvas.Children.Remove(_addImage);
+                }
+            }
         }
     }
 
@@ -667,6 +766,8 @@ namespace OSharp.Animation.WPF
 
     public enum AnimateStatus
     {
-        None, Static, Dynamic
+        None,
+        Static,
+        Dynamic
     }
 }

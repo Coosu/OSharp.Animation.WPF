@@ -15,14 +15,14 @@ namespace OSharp.Animation.WPF
         internal static readonly Dictionary<ImageSource, Brush> BrushCache = new Dictionary<ImageSource, Brush>();
 
         internal readonly Canvas Canvas;
-        private readonly List<ImageObject> _eleList = new List<ImageObject>();
+        protected readonly List<ImageObject> EleList = new List<ImageObject>();
 
         public StoryboardCanvasHost(Canvas canvas)
         {
             Canvas = canvas;
         }
 
-        public ImageObject CreateElement(Image ui,
+        public virtual ImageObject CreateElement(Image ui,
             Origin<double> origin,
             double width,
             double height,
@@ -37,13 +37,13 @@ namespace OSharp.Animation.WPF
             };
 
             //ele.Storyboard.Completed += (sender, e) => { Canvas.Children.Remove(ui); };
-            _eleList.Add(ele);
+            EleList.Add(ele);
             return ele;
         }
 
-        public void PlayWhole()
+        public virtual void PlayWhole()
         {
-            var list = _eleList.OrderBy(k => k.MinTime).ToList();
+            var list = EleList.OrderBy(k => k.MinTime).ToList();
             var sw = Stopwatch.StartNew();
             Task.Run(() =>
             {
@@ -56,20 +56,65 @@ namespace OSharp.Animation.WPF
                     }
 
                     var index1 = index;
-                    Application.Current?.Dispatcher?.BeginInvoke(new System.Action(() => { list[index1].BeginAnimation(); }));
+                    Application.Current?.Dispatcher?.BeginInvoke(new System.Action(() =>
+                    {
+                        list[index1].BeginAnimation();
+                    }));
                     index++;
                 }
             });
         }
 
+        public StoryboardGroup CreateStoryboardGroup()
+        {
+            return new StoryboardGroup(Canvas);
+        }
+
         public void Dispose()
         {
             Canvas.Children.Clear();
-            foreach (var imageObject in _eleList)
+            foreach (var imageObject in EleList)
             {
                 imageObject?.Dispose();
             }
+
             BrushCache.Clear();
+        }
+    }
+
+    public class StoryboardGroup : StoryboardCanvasHost
+    {
+        public System.Windows.Media.Animation.Storyboard Storyboard;
+
+        public StoryboardGroup(Canvas canvas) : base(canvas)
+        {
+            Storyboard = new System.Windows.Media.Animation.Storyboard();
+        }
+
+        public override ImageObject CreateElement(Image ui,
+            Origin<double> origin,
+            double width,
+            double height,
+            double defaultX = 320,
+            double defaultY = 240)
+        {
+            
+            Canvas.Children.Add(ui);
+            var ele = new ImageObject(ui, width, height, origin, defaultX, defaultY, Storyboard)
+            {
+                Host = this
+            };
+
+            EleList.Add(ele);
+            Storyboard.Completed += (sender, e) => { ele.ClearObj(); };
+            return ele;
+            
+        }
+
+        public override void PlayWhole()
+        {
+            //Canvas.Children.Clear();
+            Storyboard.Begin();
         }
     }
 }

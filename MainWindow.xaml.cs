@@ -95,9 +95,17 @@ namespace OSharp.Animation.WPF
             //});
 
             //_list.Add(ele);
-            var folder = @"C:\Program Files (x86)\osu!\Songs\hey";
+            _group = _canvasHost.CreateStoryboardGroup();
+            var folder = @"C:\Users\admin\Downloads\747401 Tamaki to Yumine (CV_Naganawa Maria, Maekawa Ryoko) - Yonakajikaru [TV Size]";
             var eg = ElementGroup.ParseFromFile(System.IO.Path.Combine(folder,
-                "DJ NAGAI feat. aru - Benibotan (yf_bmp).osb"));
+                "Tamaki to Yumine (CVNaganawa Maria, Maekawa Ryoko) - Yonakajikaru [TV Size] (rrtyui).osb"));
+
+            var min = eg.ElementList.Min(k => k.MinTime);
+            if (min > 0)
+            {
+                min = 0;
+            }
+
             foreach (var element in eg.ElementList)
             {
                 if (element is AnimatedElement) continue;
@@ -124,104 +132,122 @@ namespace OSharp.Animation.WPF
                         imagePath = System.IO.Path.Combine(newFolder, $"{withoutExt}.jpg");
                     }
                 }
+
+                if (!System.IO.File.Exists(imagePath)) continue;
                 var bitmap = new BitmapImage(new Uri(imagePath));
                 _bitmaps.Add(bitmap);
-                var uii = new Image { Source = bitmap };
-                var ele = _canvasHost.CreateElement(uii, origin, bitmap.Width, bitmap.Height, x, y);
+                var uii = new Image {Source = bitmap};
+                var ele = _group.CreateElement(uii, origin, bitmap.Width, bitmap.Height, x, y);
 
                 ele.ApplyAnimation(k =>
                 {
                     foreach (var commonEvent in element.EventList)
                     {
+                        double startT = commonEvent.StartTime - min, endT = commonEvent.EndTime - min;
+
                         switch (commonEvent.EventType)
                         {
                             case EventType.Move:
-                                {
-                                    var evt = (Move)commonEvent;
-                                    k.Move((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        new Vector2<double>(evt.StartX, evt.StartY),
-                                        new Vector2<double>(evt.EndX, evt.EndY));
-                                    break;
-                                }
+                            {
+                                var evt = (Move)commonEvent;
+                                k.Move((Easing)evt.Easing, startT, endT,
+                                    new Vector2<double>(evt.StartX, evt.StartY),
+                                    new Vector2<double>(evt.EndX, evt.EndY));
+                                break;
+                            }
+
                             case EventType.Fade:
-                                {
-                                    var evt = (Fade)commonEvent;
-                                    k.Fade((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        evt.StartOpacity,
-                                        evt.EndOpacity);
-                                    break;
-                                }
+                            {
+                                var evt = (Fade)commonEvent;
+                                k.Fade((Easing)evt.Easing, startT, endT,
+                                    evt.StartOpacity,
+                                    evt.EndOpacity);
+                                break;
+                            }
 
                             case EventType.Scale:
-                                {
-                                    var evt = (Scale)commonEvent;
-                                    k.ScaleVec((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        new Vector2<double>(evt.StartScale, evt.StartScale),
-                                        new Vector2<double>(evt.EndScale, evt.EndScale));
-                                    break;
-                                }
-                            case EventType.Rotate:
-                                {
-                                    var evt = (Rotate)commonEvent;
-                                    k.Rotate((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        evt.StartRotate,
-                                        evt.EndRotate);
-                                    break;
-                                }
-                            case EventType.Color:
-                                {
-                                    var evt = (Storyboard.Events.Color)commonEvent;
-                                    k.Color((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        new Vector3<double>(evt.StartR, evt.StartG, evt.StartB),
-                                        new Vector3<double>(evt.EndR, evt.EndG, evt.EndB));
-                                    break;
-                                }
-                            case EventType.MoveX:
-                                {
-                                    var evt = (MoveX)commonEvent;
-                                    k.MoveX((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        evt.StartX, evt.EndX);
-                                    break;
-                                }
-                            case EventType.MoveY:
-                                {
-                                    var evt = (MoveY)commonEvent;
-                                    k.MoveY((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        evt.StartY, evt.EndY);
-                                    break;
-                                }
-                            case EventType.Vector:
-                                {
-                                    var evt = (Storyboard.Events.Vector)commonEvent;
-                                    k.ScaleVec((Easing)evt.Easing, evt.StartTime, evt.EndTime,
-                                        new Vector2<double>(evt.StartScaleX, evt.StartScaleY),
-                                        new Vector2<double>(evt.EndScaleX, evt.EndScaleY));
-                                    break;
-                                }
-                            case EventType.Parameter:
-                                {
-                                    var evt = (Parameter)commonEvent;
-                                    switch (evt.Type)
-                                    {
-                                        case ParameterType.Horizontal:
-                                            k.Flip(evt.StartTime, evt.EndTime, FlipMode.FlipX);
-                                            break;
-                                        case ParameterType.Vertical:
-                                            k.Flip(evt.StartTime, evt.EndTime, FlipMode.FlipY);
-                                            break;
-                                        case ParameterType.Additive:
-                                            k.Blend(evt.StartTime, evt.EndTime, BlendMode.Normal);
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException();
-                                    }
+                            {
+                                var evt = (Scale)commonEvent;
+                                k.ScaleVec((Easing)evt.Easing, startT, endT,
+                                    new Vector2<double>(evt.StartScale, evt.StartScale),
+                                    new Vector2<double>(evt.EndScale, evt.EndScale));
+                                break;
+                            }
 
-                                    break;
+                            case EventType.Rotate:
+                            {
+                                var evt = (Rotate)commonEvent;
+                                k.Rotate((Easing)evt.Easing, startT, endT,
+                                    evt.StartRotate,
+                                    evt.EndRotate);
+                                break;
+                            }
+
+                            case EventType.Color:
+                            {
+                                var evt = (Storyboard.Events.Color)commonEvent;
+                                k.Color((Easing)evt.Easing, startT, endT,
+                                    new Vector3<double>(evt.StartR, evt.StartG, evt.StartB),
+                                    new Vector3<double>(evt.EndR, evt.EndG, evt.EndB));
+                                break;
+                            }
+
+                            case EventType.MoveX:
+                            {
+                                var evt = (MoveX)commonEvent;
+                                k.MoveX((Easing)evt.Easing, startT, endT,
+                                    evt.StartX, evt.EndX);
+                                break;
+                            }
+
+                            case EventType.MoveY:
+                            {
+                                var evt = (MoveY)commonEvent;
+                                k.MoveY((Easing)evt.Easing, startT, endT,
+                                    evt.StartY, evt.EndY);
+                                break;
+                            }
+
+                            case EventType.Vector:
+                            {
+                                var evt = (Storyboard.Events.Vector)commonEvent;
+                                k.ScaleVec((Easing)evt.Easing, startT, endT,
+                                    new Vector2<double>(evt.StartScaleX, evt.StartScaleY),
+                                    new Vector2<double>(evt.EndScaleX, evt.EndScaleY));
+                                break;
+                            }
+
+                            case EventType.Parameter:
+                            {
+                                var evt = (Parameter)commonEvent;
+                                switch (evt.Type)
+                                {
+                                    case ParameterType.Horizontal:
+                                        k.Flip(startT, endT, FlipMode.FlipX);
+                                        break;
+                                    case ParameterType.Vertical:
+                                        k.Flip(startT, endT, FlipMode.FlipY);
+                                        break;
+                                    case ParameterType.Additive:
+                                        k.Blend(startT, endT, BlendMode.Normal);
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
                                 }
+
+                                break;
+                            }
+
                             case EventType.Loop:
-                                { break; }
+                            {
+                                break;
+                            }
+
                             case EventType.Trigger:
-                                { break; }
+                            {
+                                break;
+                            }
+
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
@@ -230,6 +256,7 @@ namespace OSharp.Animation.WPF
 
                 _list.Add(ele);
             }
+
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
@@ -264,6 +291,7 @@ namespace OSharp.Animation.WPF
         private StoryboardCanvasHost _canvasHost;
         private List<BitmapImage> _bitmaps = new List<BitmapImage>();
         private List<ImageObject> _list = new List<ImageObject>();
+        private StoryboardGroup _group;
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -285,16 +313,16 @@ namespace OSharp.Animation.WPF
             //    k.Move(0, 0, 0, new Vector2<double>(320, 240), new Vector2<double>(320, 240));
             //    k.Rotate(0, 0, 10000, 0, Math.PI * 10);
             //});
-            foreach (var imageObject in _list)
-            {
-                imageObject.Reset();
-            }
+//            foreach (var imageObject in _list)
+//            {
+//                imageObject.Reset();
+//            }
 
             //foreach (var imageObject in _list)
             //{
             //    imageObject.BeginAnimation();
             //}
-            _canvasHost.PlayWhole();
+            _group.PlayWhole();
         }
     }
 }
