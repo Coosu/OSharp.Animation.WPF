@@ -105,26 +105,26 @@ namespace OSharp.Animation.WPF
 
         public void BeginAnimation()
         {
-            if (_blendStatus == AnimateStatus.None)
-            {
-                Host?.Canvas.Children.Add(_image);
-                Storyboard.Completed += (sender, e) => { Host?.Canvas.Children.Remove(_image); };
-            }
-            else if (_blendStatus == AnimateStatus.Static)
-            {
-                Host?.Canvas.Children.Add(_addImage);
-                Storyboard.Completed += (sender, e) => { Host?.Canvas.Children.Remove(_addImage); };
-            }
-            else
-            {
-                Host?.Canvas.Children.Add(_image);
-                Host?.Canvas.Children.Add(_addImage);
-                Storyboard.Completed += (sender, e) =>
-                {
-                    Host?.Canvas.Children.Remove(_image);
-                    Host?.Canvas.Children.Remove(_addImage);
-                };
-            }
+            //if (_blendStatus == AnimateStatus.None)
+            //{
+            //    Host?.Canvas.Children.Add(_image);
+            //    Storyboard.Completed += (sender, e) => { Host?.Canvas.Children.Remove(_image); };
+            //}
+            //else if (_blendStatus == AnimateStatus.Static)
+            //{
+            //    Host?.Canvas.Children.Add(_addImage);
+            //    Storyboard.Completed += (sender, e) => { Host?.Canvas.Children.Remove(_addImage); };
+            //}
+            //else
+            //{
+            //    Host?.Canvas.Children.Add(_image);
+            //    Host?.Canvas.Children.Add(_addImage);
+            //    Storyboard.Completed += (sender, e) =>
+            //    {
+            //        Host?.Canvas.Children.Remove(_image);
+            //        Host?.Canvas.Children.Remove(_addImage);
+            //    };
+            //}
 
             Storyboard.Begin();
             if (_blendStatus == AnimateStatus.Dynamic)
@@ -732,6 +732,23 @@ namespace OSharp.Animation.WPF
 
         public void Dispose()
         {
+        }
+
+        public void AddToCanvas()
+        {
+            if (_blendStatus == AnimateStatus.None)
+            {
+                Host?.Canvas.Children.Add(_image);
+            }
+            else if (_blendStatus == AnimateStatus.Static)
+            {
+                Host?.Canvas.Children.Add(_addImage);
+            }
+            else
+            {
+                Host?.Canvas.Children.Add(_image);
+                Host?.Canvas.Children.Add(_addImage);
+            }
         }
 
         public void ClearObj()

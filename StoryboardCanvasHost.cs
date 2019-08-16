@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using static System.Windows.Controls.Canvas;
 
 namespace OSharp.Animation.WPF
 {
@@ -26,11 +27,13 @@ namespace OSharp.Animation.WPF
             Origin<double> origin,
             double width,
             double height,
+            int zIndex,
             double defaultX = 320,
             double defaultY = 240)
         {
             //Canvas.Children.Add(ui);
 
+            Panel.SetZIndex(ui, zIndex);
             var ele = new ImageObject(ui, width, height, origin, defaultX, defaultY)
             {
                 Host = this
@@ -95,26 +98,49 @@ namespace OSharp.Animation.WPF
             Origin<double> origin,
             double width,
             double height,
+             int zIndex,
             double defaultX = 320,
             double defaultY = 240)
         {
-            
-            Canvas.Children.Add(ui);
+            Panel.SetZIndex(ui, zIndex);
+            //Canvas.Children.Add(ui);
             var ele = new ImageObject(ui, width, height, origin, defaultX, defaultY, Storyboard)
             {
                 Host = this
             };
 
             EleList.Add(ele);
-            Storyboard.Completed += (sender, e) => { ele.ClearObj(); };
+            //Storyboard.Completed += (sender, e) => { ele.ClearObj(); };
             return ele;
-            
+
         }
 
         public override void PlayWhole()
         {
             //Canvas.Children.Clear();
             Storyboard.Begin();
+            var list = EleList.OrderBy(k => k.MinTime).ToList();
+            var sw = Stopwatch.StartNew();
+            Task.Run(() =>
+            {
+                var index = 0;
+                while (index < list.Count)
+                {
+                    while (sw.ElapsedMilliseconds < list[index].MinTime)
+                    {
+                        Thread.Sleep(1);
+                    }
+
+                    var index1 = index;
+                    Application.Current?.Dispatcher?.BeginInvoke(new System.Action(() =>
+                    {
+                        list[index1].AddToCanvas();
+                        Storyboard.Completed += (sender, e) => { list[index1].ClearObj(); };
+                        //list[index1].BeginAnimation();
+                    }));
+                    index++;
+                }
+            });
         }
     }
 }
